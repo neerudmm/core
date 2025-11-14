@@ -49,6 +49,7 @@ from homeassistant.helpers.device_registry import (
     DeviceInfo,
 )
 from homeassistant.helpers.network import NoURLAvailableError, get_url
+from homeassistant.helpers.typing import UNDEFINED, UndefinedType
 from homeassistant.util.dt import utcnow
 
 from .const import (
@@ -119,12 +120,12 @@ def get_number_of_channels(device: BlockDevice, block: Block) -> int:
 def get_block_entity_name(
     device: BlockDevice,
     block: Block | None,
-    description: str | None = None,
+    description: str | UndefinedType | None = None,
 ) -> str | None:
     """Naming for block based switch and sensors."""
     channel_name = get_block_channel_name(device, block)
 
-    if description:
+    if description is not UNDEFINED and description:
         return f"{channel_name} {description.lower()}" if channel_name else description
 
     return channel_name
@@ -442,17 +443,37 @@ def get_rpc_sub_device_name(
 
 
 def get_rpc_entity_name(
-    device: RpcDevice, key: str, name: str | None = None, role: str | None = None
+    device: RpcDevice,
+    key: str,
+    name: str | UndefinedType | None = None,
+    role: str | None = None,
 ) -> str | None:
     """Naming for RPC based switch and sensors."""
     channel_name = get_rpc_channel_name(device, key)
 
-    if name:
+    if name is not UNDEFINED and name:
         if role and role != ROLE_GENERIC:
             return name
         return f"{channel_name} {name.lower()}" if channel_name else name
 
     return channel_name
+
+
+def get_entity_translation_attributes(
+    channel_name: str | None,
+    translation_key: str | None,
+    device_class: str | None,
+    default_to_device_class_name: bool,
+) -> tuple[dict[str, str] | None, str | None]:
+    """Translation attributes for entity with channel name."""
+    if channel_name is None:
+        return None, None
+
+    key = translation_key
+    if key is None and default_to_device_class_name:
+        key = device_class
+
+    return {"channel_name": channel_name}, f"{key}_with_channel_name" if key else None
 
 
 def get_device_entry_gen(entry: ConfigEntry) -> int:
